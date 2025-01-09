@@ -5,12 +5,28 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class FileFilter {
+    private static final String MAX_STRING_LENGTH = "Произошла ошибка, введена максимально допустимая длина строки";
+    private static final String MAX_VALUE = "Введено максимально допустимое значение";
     private int stringCounter = 0;
     private int longCounter = 0;
-    private int doubleCounter = 0;
+    private int floatCounter = 0;
+
     private List<String> strings = new ArrayList<String>();
     private List<String> longs = new ArrayList<>();
     private List<String> doubles = new ArrayList<>();
+
+    private Long maxLong = Long.MAX_VALUE;
+    private Long minLong = Long.MIN_VALUE;
+    private Double averageLong = 0.0;
+    private Long sumLong = 0L;
+
+    private Double maxDouble = Double.MAX_VALUE;
+    private Double minDouble = Double.MIN_VALUE;
+    private Double averageDouble = 0.0;
+    private Double sumDouble = 0.0;
+
+    private int maxStringLength = Integer.MAX_VALUE;
+    private int minStringLength = Integer.MIN_VALUE;
 
     public void processFile(String[] inputFiles, boolean append) {
         for (String fileName : inputFiles) {
@@ -24,8 +40,9 @@ public class FileFilter {
         try (BufferedReader bufferedReader = new BufferedReader(new FileReader(fileName))) {
             String line;
             while ((line = bufferedReader.readLine()) != null) {
-                writeResults(stringDefinition(line), append);
+                stringDefinition(line);
             }
+            writeResults(fileName, append);
         } catch (IOException exception) {
             System.out.println("Произошла ошибка при обработке файла");
         }
@@ -33,41 +50,38 @@ public class FileFilter {
 
     private void writeResults(String outputFile, boolean append) {
         if (!longs.isEmpty()) {
-            writeToFile(outputFile, longs, append);
+            writeToFile("integers", longs, append);
         }
         if (!strings.isEmpty()) {
-            writeToFile(outputFile, strings, append);
+            writeToFile("strings", strings, append);
         }
         if (!doubles.isEmpty()) {
-            writeToFile(outputFile, doubles, append);
+            writeToFile("floats", doubles, append);
         }
-
     }
 
-    private String stringDefinition(String line) {
+    private void stringDefinition(String line) {
         line = line.trim();
         if (line.isEmpty()) {
-            throw new BadException("Строка пуста");
+            return;
         }
         if (isInteger(line)) {
             longCounter++;
             longs.add(line);
-            return "integers";
         } else if (isDouble(line)) {
-            doubleCounter++;
+            floatCounter++;
             doubles.add(line);
-            return "doubles";
         } else {
             stringCounter++;
             strings.add(line);
-            return "strings";
         }
     }
 
     private void writeToFile(String fileName, List<String> values, boolean append) {
-        try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(fileName+".txt", append))) {
+        try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(fileName + ".txt", append))) {
             for (String line : values) {
                 bufferedWriter.write(line);
+                System.out.println(line);
                 bufferedWriter.newLine();
             }
         } catch (IOException exception) {
@@ -93,7 +107,23 @@ public class FileFilter {
         }
     }
 
+//    private void longsStatistics() {
+//        longCounter++;
+//        try {
+//
+//        }
+//    }
+
+    private void printStatistics() {
+        System.out.printf("В файл записано %d строк", stringCounter);
+        System.out.printf("В файл записано %d целых чисел", longCounter);
+        System.out.printf("В файл записано %d вещественных чисел", floatCounter);
+    }
+
+
     private static class BadException extends RuntimeException {
+        private static final String MAX_STRING_LENGTH = "Произошла ошибка, введена максимально допустимая длина строки";
+        private static final String MAX_VALUE = "Введено максимально допустимое значение";
 
         private BadException(String message) {
         }
