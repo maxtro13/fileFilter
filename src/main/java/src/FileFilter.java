@@ -208,11 +208,4 @@ public class FileFilter {
         }
     }
 
-    private static class BadException extends RuntimeException {
-        private static final String MAX_STRING_LENGTH = "Произошла ошибка, введена максимально допустимая длина строки";
-        private static final String MAX_VALUE = "Введено максимально допустимое значение";
-
-        private BadException(String message) {
-        }
-    }
 }
