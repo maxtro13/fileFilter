@@ -4,6 +4,7 @@ import java.io.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,39 +16,41 @@ public class FileFilter {
     private int longCounter = 0;
     private int floatCounter = 0;
 
+    private final DecimalFormat format = new DecimalFormat("#.####");
+
+
     private List<String> strings = new ArrayList<String>();
     private List<String> longs = new ArrayList<>();
     private List<String> doubles = new ArrayList<>();
 
     private long maxLong = 0L;
-    private long minLong = 0L;
-    private double averageLong = 0.0;
+    private long minLong = Long.MAX_VALUE;
+    private BigDecimal averageLong = BigDecimal.ZERO;
     private BigInteger sumLong = BigInteger.ZERO;
 
     private double maxDouble = 0.0;
     private double minDouble = 0.0;
-    private double averageDouble = 0.0;
+    private BigDecimal averageDouble = BigDecimal.ZERO;
     private BigDecimal sumDouble = BigDecimal.ZERO;
 
     private int maxStringLength = 0;
-    private int minStringLength = 0;
+    private int minStringLength = Integer.MAX_VALUE;
 
-    public void processFile(String[] inputFiles, boolean append) {
+    public void processFile(String[] inputFiles, String pathToFile, String prefix, boolean append) {
         for (String fileName : inputFiles) {
-            readFile(fileName, append);
+            readFile(fileName);
         }
+        writeResults(pathToFile, append);
 
-        System.out.println(stringCounter);
-        System.out.println(longCounter);
+        printFullStatistics();
     }
 
-    private void readFile(String fileName, boolean append) {
+    private void readFile(String fileName) {
         try (BufferedReader bufferedReader = new BufferedReader(new FileReader(fileName))) {
             String line;
             while ((line = bufferedReader.readLine()) != null) {
                 stringDefinition(line);
             }
-            writeResults(fileName, append);
         } catch (IOException exception) {
             System.out.println(INPUT_FILE_ERROR);
         }
@@ -55,13 +58,13 @@ public class FileFilter {
 
     private void writeResults(String outputFile, boolean append) {
         if (!longs.isEmpty()) {
-            writeToFile("integers", longs, append);
+            writeToFile("integers.txt", longs, append);
         }
         if (!strings.isEmpty()) {
-            writeToFile("strings", strings, append);
+            writeToFile("strings.txt", strings, append);
         }
         if (!doubles.isEmpty()) {
-            writeToFile("floats", doubles, append);
+            writeToFile("floats.txt", doubles, append);
         }
     }
 
@@ -83,10 +86,9 @@ public class FileFilter {
     }
 
     private void writeToFile(String fileName, List<String> values, boolean append) {
-        try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(fileName + ".txt", append))) {
+        try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(fileName, append))) {
             for (String line : values) {
                 bufferedWriter.write(line);
-                System.out.println(line);
                 bufferedWriter.newLine();
             }
         } catch (IOException exception) {
@@ -130,7 +132,8 @@ public class FileFilter {
         floatCounter++;
         try {
             double value = Double.parseDouble(line);
-            sumDouble = sumDouble.add(BigDecimal.valueOf(value));
+            sumDouble = sumDouble.add(BigDecimal.valueOf(value))
+                    .setScale(4, RoundingMode.HALF_UP);
             if (value > maxDouble) maxDouble = value;
             if (value < minDouble) minDouble = value;
             calculateAverageDouble();
@@ -148,26 +151,45 @@ public class FileFilter {
 
     private void printShortStatistics() {
         System.out.println("Выведена краткая статистика");
-        System.out.printf("В файл записано %d строк", stringCounter);
-        System.out.printf("В файл записано %d целых чисел", longCounter);
-        System.out.printf("В файл записано %d вещественных чисел", floatCounter);
+        System.out.printf("В файл записано %d строк\n", stringCounter);
+        System.out.printf("В файл записано %d целых чисел\n", longCounter);
+        System.out.printf("В файл записано %d вещественных чисел\n", floatCounter);
     }
 
     private void printFullStatistics() {
-        System.out.println("");
+        printShortStatistics();
+        System.out.print("Выведена полная статистика\n");
+        System.out.println("-".repeat(100));
+        System.out.println("Статистика целых чисел");
+        System.out.printf("Максимальное целое число %d\n", maxLong);
+        System.out.printf("Минимальное целое число %d\n", minLong);
+        System.out.printf("Сумма целых чисел %d\n", sumLong);
+        System.out.printf("Среднее целых чисел %s\n", averageLong.toPlainString());
+        System.out.println("-".repeat(100));
+
+        System.out.println("Статистика вещественных чисел");
+        System.out.printf("Максимальное вещественное число %.4f\n", maxDouble);
+        System.out.printf("Минимальное вещественное число %.4f\n", minDouble);
+        System.out.printf("Сумма вещественных чисел %s\n", sumDouble.toPlainString());
+        System.out.printf("Среднее вещественных чисел %s\n", averageDouble.toPlainString());
+        System.out.println("-".repeat(100));
+
+        System.out.println("Статистика строк");
+        System.out.printf("Максимальная длина строка %d\n", maxStringLength);
+        System.out.printf("Минимальная длина строка %d\n", minStringLength);
     }
 
     private void calculateAverageLong() {
         if (longCounter > 0) {
             try {
                 averageLong = new BigDecimal(sumLong)
-                        .divide(BigDecimal.valueOf(longCounter), 2, RoundingMode.HALF_UP)
-                        .doubleValue();
+                        .divide(BigDecimal.valueOf(longCounter), 4, RoundingMode.HALF_UP)
+                        .stripTrailingZeros();
             } catch (ArithmeticException exception) {
                 System.out.println("Ошибка при вычислении среднего значения для целочисленных элементов");
             }
         } else {
-            averageLong = 0.0;
+            averageLong = BigDecimal.ZERO;
         }
     }
 
@@ -175,13 +197,14 @@ public class FileFilter {
         if (floatCounter > 0) {
             try {
                 averageDouble = sumDouble
-                        .divide(BigDecimal.valueOf(floatCounter), 3, RoundingMode.HALF_UP)
-                        .doubleValue();
+                        .stripTrailingZeros()
+                        .divide(BigDecimal.valueOf(floatCounter), 4, RoundingMode.HALF_UP)
+                        .stripTrailingZeros();
             } catch (ArithmeticException exception) {
                 System.out.println("Ошибка при вычислении среднего значения для вещественных элементов");
             }
         } else {
-            averageDouble = 0.0;
+            averageDouble = BigDecimal.ZERO;
         }
     }
 
