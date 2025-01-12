@@ -26,13 +26,14 @@ public class FileFilter {
     private List<String> longs = new ArrayList<>();
     private List<String> doubles = new ArrayList<>();
 
-    private long maxLong = 0L;
-    private long minLong = Long.MAX_VALUE;
+    private BigInteger maxLong = BigInteger.ZERO;
+    private BigInteger minLong = BigInteger.valueOf(Long.MAX_VALUE);
+
     private BigDecimal averageLong = BigDecimal.ZERO;
     private BigInteger sumLong = BigInteger.ZERO;
 
-    private double maxDouble = 0.0;
-    private double minDouble = 0.0;
+    private BigDecimal maxDouble = BigDecimal.ZERO;
+    private BigDecimal minDouble = new BigDecimal(Double.MAX_VALUE);
     private BigDecimal averageDouble = BigDecimal.ZERO;
     private BigDecimal sumDouble = BigDecimal.ZERO;
 
@@ -56,6 +57,7 @@ public class FileFilter {
             }
         } catch (IOException exception) {
             System.out.println(INPUT_FILE_ERROR);
+            System.out.println(exception.getMessage());
         }
     }
 
@@ -75,7 +77,6 @@ public class FileFilter {
         if (fullStats) {
             printFullStatistics();
         }
-        System.out.println(prefix);
         String outputFileName = pathToFile.toString() + "\\" + (prefix == null ? "" : prefix);
         if (!longs.isEmpty()) {
             writeToFile(outputFileName + "integers.txt", longs, append);
@@ -89,10 +90,11 @@ public class FileFilter {
     }
 
     private void stringDefinition(String line) {
-        line = line.trim();
+        line = line.trim().replace(",", ".");
         if (line.isEmpty()) {
             return;
         }
+
         if (isInteger(line)) {
             longsStats(line);
             longs.add(line);
@@ -112,13 +114,15 @@ public class FileFilter {
                 bufferedWriter.newLine();
             }
         } catch (IOException exception) {
+            System.out.println(exception.getMessage());
             System.out.println("При записи файла произошла ошибка");
         }
     }
 
     private boolean isInteger(String line) {
         try {
-            Long.parseLong(line);
+//            Long.parseLong(line);
+            new BigInteger(line);
             return true;
         } catch (NumberFormatException e) {
             return false;
@@ -127,8 +131,7 @@ public class FileFilter {
 
     private boolean isDouble(String line) {
         try {
-            Double.parseDouble(line);
-            return true;
+            return new BigDecimal(line).stripTrailingZeros().scale() > 0;
         } catch (NumberFormatException e) {
             return false;
         }
@@ -137,10 +140,10 @@ public class FileFilter {
     private void longsStats(String line) {
         longCounter++;
         try {
-            long value = Long.parseLong(line);
-            sumLong = sumLong.add(BigInteger.valueOf(value));
-            if (value > maxLong) maxLong = value;
-            if (value < minLong) minLong = value;
+            BigInteger value = new BigInteger(line);
+            sumLong = sumLong.add(value);
+            maxLong = maxLong.max(value);
+            minLong = minLong.min(value);
             calculateAverageLong();
         } catch (NumberFormatException exception) {
             System.out.println(INPUT_LINE_ERROR);
@@ -150,11 +153,11 @@ public class FileFilter {
     private void doubleStats(String line) {
         floatCounter++;
         try {
-            double value = Double.parseDouble(line);
-            sumDouble = sumDouble.add(BigDecimal.valueOf(value))
+            BigDecimal value = new BigDecimal(line);
+            sumDouble = sumDouble.add(value)
                     .setScale(4, RoundingMode.HALF_UP);
-            if (value > maxDouble) maxDouble = value;
-            if (value < minDouble) minDouble = value;
+            maxDouble = maxDouble.max(value);
+            minDouble = minDouble.min(value);
             calculateAverageDouble();
         } catch (NumberFormatException exception) {
             System.out.println(INPUT_LINE_ERROR);
@@ -176,10 +179,11 @@ public class FileFilter {
     }
 
     private void printFullStatistics() {
-        printShortStatistics();
         System.out.print("Выведена полная статистика\n");
         System.out.println("-".repeat(100));
+
         System.out.println("Статистика целых чисел");
+        System.out.printf("В файл записано %d целых чисел\n", longCounter);
         System.out.printf("Максимальное целое число %d\n", maxLong);
         System.out.printf("Минимальное целое число %d\n", minLong);
         System.out.printf("Сумма целых чисел %d\n", sumLong);
@@ -187,6 +191,7 @@ public class FileFilter {
         System.out.println("-".repeat(100));
 
         System.out.println("Статистика вещественных чисел");
+        System.out.printf("В файл записано %d вещественных чисел\n", floatCounter);
         System.out.printf("Максимальное вещественное число %.4f\n", maxDouble);
         System.out.printf("Минимальное вещественное число %.4f\n", minDouble);
         System.out.printf("Сумма вещественных чисел %s\n", sumDouble.toPlainString());
@@ -194,6 +199,7 @@ public class FileFilter {
         System.out.println("-".repeat(100));
 
         System.out.println("Статистика строк");
+        System.out.printf("В файл записано %d строк\n", stringCounter);
         System.out.printf("Максимальная длина строка %d\n", maxStringLength);
         System.out.printf("Минимальная длина строка %d\n", minStringLength);
     }
