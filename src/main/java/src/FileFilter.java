@@ -4,6 +4,9 @@ import java.io.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,13 +39,13 @@ public class FileFilter {
     private int maxStringLength = 0;
     private int minStringLength = Integer.MAX_VALUE;
 
-    public void processFile(String[] inputFiles, String pathToFile, String prefix, boolean append) {
+    public void processFile(String[] inputFiles, String outputPath, String prefix,
+                            boolean append, boolean shortStat, boolean fullStat) {
         for (String fileName : inputFiles) {
             readFile(fileName);
         }
-        writeResults(pathToFile, append);
+        writeResults(outputPath, append, prefix, shortStat, fullStat);
 
-        printFullStatistics();
     }
 
     private void readFile(String fileName) {
@@ -56,15 +59,32 @@ public class FileFilter {
         }
     }
 
-    private void writeResults(String outputFile, boolean append) {
+    private void writeResults(String outputPath, boolean append, String prefix, boolean shortStats, boolean fullStats) {
+        Path pathToFile = Paths.get(outputPath);
+        if (Files.notExists(pathToFile)) {
+            try {
+                Files.createDirectories(pathToFile);
+            } catch (IOException exception) {
+                System.out.println("Ошибка при создании пути к файлу" + exception.getMessage());
+                return;
+            }
+        }
+        if (shortStats) {
+            printShortStatistics();
+        }
+        if (fullStats) {
+            printFullStatistics();
+        }
+        System.out.println(prefix);
+        String outputFileName = pathToFile.toString() + "\\" + (prefix == null ? "" : prefix);
         if (!longs.isEmpty()) {
-            writeToFile("integers.txt", longs, append);
+            writeToFile(outputFileName + "integers.txt", longs, append);
         }
         if (!strings.isEmpty()) {
-            writeToFile("strings.txt", strings, append);
+            writeToFile(outputFileName + "strings.txt", strings, append);
         }
         if (!doubles.isEmpty()) {
-            writeToFile("floats.txt", doubles, append);
+            writeToFile(outputFileName + "floats.txt", doubles, append);
         }
     }
 
@@ -113,7 +133,6 @@ public class FileFilter {
             return false;
         }
     }
-
 
     private void longsStats(String line) {
         longCounter++;
